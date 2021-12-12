@@ -3,7 +3,6 @@ module Utilities where
 import Data.Array (Ix (inRange))
 import Data.Bifunctor (Bifunctor (second))
 import System.Random (Random (randomR), StdGen)
-import qualified System.Random as System.Random.Internal
 
 --------------------------------- Types ---------------------------------
 

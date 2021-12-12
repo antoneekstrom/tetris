@@ -53,4 +53,4 @@ current t m = m {tetromino = t}
 --------------------------------- Constructors ---------------------------------
 
 newMatrix :: Matrix
-newMatrix = Matrix (Utilities.matrix (10, 10) Nothing) Nothing
+newMatrix = Matrix (Utilities.matrix (20, 10) Nothing) Nothing

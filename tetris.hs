@@ -38,7 +38,7 @@ spawn :: Tetris -> Tetris
 spawn ts@(Tetris m p) =
   let (p', t) = fromQueue (rows m) p
    in case tetromino m of
-        Nothing -> Tetris (current (Just t) m) p'
+        Nothing -> Tetris (current (Just t) m) p' { canHold = True }
         _ -> ts
 
 swap :: Tetris -> Tetris
@@ -84,6 +84,15 @@ step ts@(Tetris m p) =
     Just t -> spawn $ Tetris m {rows = rows'} {tetromino = t'} p
       where
         (rows', t') = fall (rows m) t
+
+populateQueue :: Tetris -> Queue -> Tetris
+populateQueue (Tetris m p) q = Tetris m p { queue = q }
+
+addRandomQueue :: Tetris -> IO Tetris
+addRandomQueue ts = populateQueue ts <$> randomQueue
+
+x :: IO Tetris -> IO Tetris
+x ts = addRandomQueue =<< ts
 
 update :: Input -> Tetris -> Tetris
 update (Action Swap) = swap

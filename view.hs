@@ -1,12 +1,67 @@
 {-# LANGUAGE TupleSections #-}
+
 module View where
 
-import Data.Maybe (maybe, isJust, fromJust, fromMaybe)
+import Data.Maybe (fromMaybe)
+import GHC.Float (int2Float)
 import Graphics.Gloss
+import Graphics.Gloss.Interface.IO.Game (Event (EventKey), Key (Char, SpecialKey), KeyState (Down), SpecialKey (KeyDown, KeyLeft, KeyRight, KeyShiftL, KeySpace, KeyUp))
+import Matrix
 import Tetris
-import Data.Bifunctor (Bifunctor(second))
+import Tetromino
+import Utilities (enumerateMatrix)
 
-getColor :: Tetris.Color -> Graphics.Gloss.Color
+cellSize = 20
+
+windowSize = (10 * cellSize, 20 * cellSize)
+
+window :: Display
+window = InWindow "Tetris" windowSize (10, 10)
+
+view :: Tetris -> Picture
+view ts = Pictures [renderCells ts, maybe Blank renderTetromino (tetromino $ matrix ts)]
+
+renderBlocks blocks = Pictures $ map (\((row, col), cell) -> renderBlock (col, row) (int2Float cellSize) (fromMaybe White cell)) blocks
+
+renderCells ts = renderBlocks $ concat $ enumerateMatrix (rows $ matrix ts)
+
+renderTetromino t = renderBlocks $ map (,Just $ Tetromino.color t) $ minos t
+
+handleInput :: Event -> Tetris -> Tetris
+handleInput (EventKey key Graphics.Gloss.Interface.IO.Game.Down modifiers _) ts =
+  case key of
+    (SpecialKey KeyRight) -> update (Action $ Move Tetris.Right) ts
+    (SpecialKey KeyLeft) -> update (Action $ Move Tetris.Left) ts
+    (SpecialKey KeyUp) -> update (Action $ Move Tetris.Rotate) ts
+    (SpecialKey KeyDown) -> update (Control None) ts
+    (SpecialKey KeySpace) -> update (Action Drop) ts
+    (Char 'c') -> update (Action Swap) ts
+    (SpecialKey KeyShiftL) -> update (Action Swap) ts
+    _ -> ts
+handleInput _ ts = ts
+
+step :: Float -> Tetris -> Tetris
+step i = update (Control None)
+
+main :: IO ()
+main =
+  do
+    ts <- tetris
+    play window black 2 ts view handleInput View.step
+
+renderBlock :: (Int, Int) -> Float -> Tetromino.Color -> Picture
+renderBlock pos size color = Color (getColor color) $ View.translate pos size $ square size
+
+translate :: (Int, Int) -> Float -> Picture -> Picture
+translate (x, y) size =
+  Translate
+    (int2Float x * size - (int2Float (fst windowSize) / 2) + (size / 2))
+    (int2Float (- y) * size + (int2Float (snd windowSize) / 2) - (size / 2))
+
+square :: Float -> Picture
+square size = Polygon $ rectanglePath size size
+
+getColor :: Tetromino.Color -> Graphics.Gloss.Color
 getColor Cyan = cyan
 getColor Magenta = magenta
 getColor Yellow = yellow
@@ -15,33 +70,4 @@ getColor Blue = blue
 getColor Green = green
 getColor Red = red
 getColor White = white
-
-renderBlock :: Position -> Graphics.Gloss.Color -> Picture
-renderBlock pos c = colorCell c $ translateCell pos rect
-    where
-        colorCell c = Color c
-        translateCell (row, col) = Translate (fromIntegral row * 10) (fromIntegral col * 10)
-        rect = Polygon $ rectanglePath 10 10
-
-renderBlocks :: [(Position, Tetris.Color)] -> [Picture]
-renderBlocks = map $ uncurry renderBlock . second getColor
-
-renderMatrix :: [Row] -> [Picture]
-renderMatrix rows = renderBlocks $ map (second $ fromMaybe White) $ concat $ mapWithPosition rows
-
-renderTetromino :: Tetromino -> [Picture]
-renderTetromino t = renderBlocks $ map (,Tetris.color t) (minos t)
-
-view :: State -> Picture
-view (State (Matrix rows Nothing) _) = Pictures $ renderMatrix rows
-view (State (Matrix rows (Just t)) _) = Pictures $ renderMatrix rows ++ renderTetromino t
-
-handleInput e s = s
-
-step _ (State m t) = State (update m) t
-
-main = play window black 2 newGame view handleInput step
-  where
-    window = InWindow "Tetris" (600, 600) (10, 10)
-
-test = uncurry Matrix $ fall (matrix (20, 10)) (t' (2, 4))
+getColor Black = black

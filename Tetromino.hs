@@ -17,7 +17,7 @@ data Tetromino = Tetromino
   }
 
 -- | A color.
-data Color = Cyan | Magenta | Yellow | Orange | Blue | Green | Red | White
+data Color = Cyan | Magenta | Yellow | Orange | Blue | Green | Red | White | Black
   deriving (Eq, Show)
 
 -- | Piece of a tetromino.
