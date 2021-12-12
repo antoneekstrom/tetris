@@ -50,6 +50,30 @@ swap (Tetris m p) =
         Nothing -> Tetris (current (Just tSpawned) m) pSpawned
         _ -> Tetris (current tHeld m) pHolding
 
+rotate :: Tetris -> Tetris
+rotate (Tetris m p) =
+  case tetromino m of
+    Just t -> Tetris m {tetromino = Just $ Tetromino.rotate t} p
+    Nothing -> Tetris m p
+
+rotateCC :: Tetris -> Tetris
+rotateCC (Tetris m p) =
+  case tetromino m of
+    Just t -> Tetris m {tetromino = Just $ Tetromino.rotateCC t} p
+    Nothing -> Tetris m p
+
+move :: (Int, Int) -> Tetris -> Tetris
+move dir (Tetris m p) =
+  case tetromino m of
+    Just t -> Tetris m {tetromino = Just $ Tetromino.move dir (rows m) t} p
+    Nothing -> Tetris m p
+
+drop :: Tetris -> Tetris
+drop (Tetris m p) =
+  case tetromino m of
+    Just t -> spawn $ Tetris m {rows = Tetromino.drop (rows m) t, tetromino = Nothing} p
+    Nothing -> Tetris m p
+
 delete :: Tetris -> Tetris
 delete (Tetris m p) = Tetris m {tetromino = Nothing} p
 
@@ -62,7 +86,12 @@ step ts@(Tetris m p) =
         (rows', t') = fall (rows m) t
 
 update :: Input -> Tetris -> Tetris
-update (Action Swap) = step . swap
+update (Action Swap) = swap
+update (Action (Move Rotate)) = Tetris.rotate
+update (Action (Move RotateCC)) = Tetris.rotateCC
+update (Action (Move Tetris.Left)) = Tetris.move left
+update (Action (Move Tetris.Right)) = Tetris.move right
+update (Action Drop) = Tetris.drop
 update _ = step
 
 --------------------------------- Constructors ---------------------------------

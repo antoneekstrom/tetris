@@ -64,6 +64,12 @@ translate d rows t = t {center = center t `addp` d}
 canMove :: (Int, Int) -> [Row] -> Tetromino -> Bool
 canMove d rows = isLegal (translate d rows) rows
 
+move :: (Int, Int) -> [Row] -> Tetromino -> Tetromino
+move dir rows t
+  | dir == down || dir == up = error "move: Can only move left and right."
+  | canMove dir rows t = translate dir rows t
+  | otherwise = t
+
 --------------------------------- Matrix ---------------------------------
 
 -- | Moves the tetromino down.
@@ -147,7 +153,7 @@ up :: Num a => (a, a)
 up = (-1, 0)
 
 left :: Num a => (a, a)
-left = (-1, 0)
+left = (0, -1)
 
 right :: Num a => (a, a)
-right = (1, 0)
+right = (0, 1)

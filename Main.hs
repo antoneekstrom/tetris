@@ -24,6 +24,11 @@ main = loop =<< tetris
 
     handleInput input ts = case input of
       "swap" -> update (Action Swap)
+      "left" -> update (Action (Move Tetris.Left))
+      "right" -> update (Action (Move Tetris.Right))
+      "rotate" -> update (Action (Move Rotate))
+      "rotateCC" -> update (Action (Move RotateCC))
+      "drop" -> update (Action Drop)
       _ -> update (Control None)
 
     log input ts =

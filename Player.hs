@@ -26,7 +26,7 @@ popQueue :: Player -> (Player, Position -> Tetromino)
 popQueue p = (p {queue = tail $ queue p}, head $ queue p)
 
 fromQueue :: [Row] -> Player -> (Player, Tetromino)
-fromQueue rows p = second ($ origin rows) (popQueue p)
+fromQueue rows p = second ($ origin rows) (popQueue $ p {canHold = True})
 
 hold :: [Row] -> Maybe Tetromino -> Player -> (Player, Maybe Tetromino)
 hold _ _ p | not $ canHold p = error "hold: can't hold"
