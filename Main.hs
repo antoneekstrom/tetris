@@ -1,7 +1,7 @@
 module Main where
 
 import Matrix
-import Player (Player (held))
+import Player (Player (held, canHold))
 import Tetris
 import Tetromino
 import Util
@@ -29,4 +29,5 @@ main = loop =<< tetris
     log input ts =
       case input of
         "held" -> print $ held $ player ts
+        "canHold" -> print $ canHold $ player ts
         _ -> return ()

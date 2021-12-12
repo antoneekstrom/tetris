@@ -67,16 +67,18 @@ canMove d rows = isLegal (translate d rows) rows
 --------------------------------- Matrix ---------------------------------
 
 -- | Moves the tetromino down.
-fall :: [Row] -> Tetromino -> Tetromino
+fall :: [Row] -> Tetromino -> ([Row], Maybe Tetromino)
 fall rows t
-  | canMove down rows t = translate down rows t
-  | otherwise = t
+  | canMove down rows t = (rows, Just $ translate down rows t)
+  | otherwise = (lock rows t, Nothing)
 
 -- | Returns the tetromino where it would be if it would fall all the way down.
 landing :: [Row] -> Tetromino -> Tetromino
-landing rows t
-  | canMove down rows t = fall rows t
-  | otherwise = t
+landing rows t =
+  let (rows', t') = fall rows t
+  in case t' of
+    Nothing -> t
+    Just t'' -> landing rows' t''
 
 -- | Fills the matrix with the tetromino.
 lock :: [Row] -> Tetromino -> [Row]

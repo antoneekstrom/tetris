@@ -1,10 +1,10 @@
 module Player where
 
+import Data.Bifunctor (Bifunctor (second))
 import Matrix (Score, origin)
 import System.Random (StdGen, newStdGen)
 import Tetromino (Row, Tetromino (Tetromino), tetrominos)
 import Utilities (At (at), Position, shuffle)
-import Data.Bifunctor (Bifunctor(second))
 
 --------------------------------- Types ---------------------------------
 
@@ -28,15 +28,11 @@ popQueue p = (p {queue = tail $ queue p}, head $ queue p)
 fromQueue :: [Row] -> Player -> (Player, Tetromino)
 fromQueue rows p = second ($ origin rows) (popQueue p)
 
-hold :: [Row] -> Maybe Tetromino -> Player -> Player
-hold rows (Just t) p | canHold p = p {held = Just $ t `at` origin rows}
-hold _ _ p = p {held = Nothing}
-
-unhold :: Player -> (Player, Maybe Tetromino)
-unhold p =
-  case held p of
-    Just t -> (p {held = Nothing, canHold = False}, Just t)
-    Nothing -> (p, Nothing)
+hold :: [Row] -> Maybe Tetromino -> Player -> (Player, Maybe Tetromino)
+hold _ _ p | not $ canHold p = error "hold: can't hold"
+hold rows t p = case t of
+  Just t' -> (p {held = Just $ t' `at` origin rows, canHold = False}, held p)
+  Nothing -> (p {canHold = False}, held p)
 
 -- | Returns a randomly shuffled queue with one of each tetromino.
 randomQueue :: IO Queue

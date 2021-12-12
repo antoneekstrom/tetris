@@ -37,27 +37,29 @@ instance Show Tetris where
 spawn :: Tetris -> Tetris
 spawn ts@(Tetris m p) =
   let (p', t) = fromQueue (rows m) p
-   in case held p of
+   in case tetromino m of
         Nothing -> Tetris (current (Just t) m) p'
         _ -> ts
 
 swap :: Tetris -> Tetris
-swap ts@(Tetris m p) =
-  let (p', held) = unhold p
-      holdCurrent = hold (rows m) (tetromino m) p'
-      (spawned, t) = fromQueue (rows m) holdCurrent
-   in case held of
-        Nothing -> Tetris (current (Just t) m) spawned
-        Just _ -> Tetris (current held m) holdCurrent
+swap (Tetris m p) | not $ canHold p = Tetris m p
+swap (Tetris m p) =
+  let (pHolding, tHeld) = hold (rows m) (tetromino m) p
+      (pSpawned, tSpawned) = fromQueue (rows m) pHolding
+   in case tHeld of
+        Nothing -> Tetris (current (Just tSpawned) m) pSpawned
+        _ -> Tetris (current tHeld m) pHolding
 
 delete :: Tetris -> Tetris
-delete (Tetris m p) = Tetris m { tetromino = Nothing } p
+delete (Tetris m p) = Tetris m {tetromino = Nothing} p
 
 step :: Tetris -> Tetris
 step ts@(Tetris m p) =
   case tetromino m of
-    Just t -> Tetris m { tetromino = Just $ fall (rows m) t } p
     Nothing -> ts
+    Just t -> spawn $ Tetris m {rows = rows'} {tetromino = t'} p
+      where
+        (rows', t') = fall (rows m) t
 
 update :: Input -> Tetris -> Tetris
 update (Action Swap) = step . swap
