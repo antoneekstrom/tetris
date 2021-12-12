@@ -1,0 +1,32 @@
+module Main where
+
+import Matrix
+import Player (Player (held))
+import Tetris
+import Tetromino
+import Util
+import Utilities
+
+instance Show Tetromino where
+  show t = show $ Matrix (Utilities.matrix (5, 5) Nothing) (Just t)
+
+main = loop =<< tetris
+  where
+    loop ts =
+      do
+        print ts
+        input <- getLine
+
+        log input ts
+
+        let update = handleInput input ts
+        loop $ update ts
+
+    handleInput input ts = case input of
+      "swap" -> update (Action Swap)
+      _ -> update (Control None)
+
+    log input ts =
+      case input of
+        "held" -> print $ held $ player ts
+        _ -> return ()
