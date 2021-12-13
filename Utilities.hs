@@ -16,6 +16,18 @@ type Dimension = (Int, Int)
 class At a where
   at :: a -> Position -> a
 
+  -- | A color.
+
+data Color
+  = Cyan
+  | Magenta
+  | Yellow
+  | Orange
+  | Blue
+  | Green
+  | Red
+  deriving (Eq, Show)
+
 --------------------------------- Lists ---------------------------------
 
 -- | Maps each element with its corresponding index.
@@ -68,3 +80,17 @@ withinBounds :: [[a]] -> Position -> Bool
 withinBounds rows (row, col) =
   inRange (0, length rows - 1) row
     && inRange (0, length (rows !! row) - 1) col
+
+--------------------------------- Directions ---------------------------------
+
+down :: Num a => (a, a)
+down = (1, 0)
+
+up :: Num a => (a, a)
+up = (-1, 0)
+
+left :: Num a => (a, a)
+left = (0, -1)
+
+right :: Num a => (a, a)
+right = (0, 1)

@@ -1,109 +1,133 @@
-module Tetris where
+module Tetris
+  ( Tetris (rows, tetromino, player, isPaused),
+    newTetris,
+    step,
+    stepR,
+    Tetris.swap,
+    move,
+    Tetris.drop,
+    rotate,
+    rotateCC,
+    fall,
+    togglePause
+  )
+where
 
 import Data.Bifunctor (Bifunctor (second))
-import Data.Maybe
-import Matrix
-import Player
-import Tetromino
-import Utilities
+import Data.Maybe (fromMaybe, isNothing)
+import Player (Player (canHold), newPlayer, next, populateQueue, swap)
+import Rows (Cell, Row, clear, isGameOver, origin)
 import System.Random (StdGen)
+import Tetromino (Tetromino, contains)
+import qualified Tetromino (drop, fall, move, rotate, rotateCC)
+import Utilities (Position, enumerateMatrix, matrix)
 
 --------------------------------- Types ---------------------------------
 
 -- | The state of the game.
 data Tetris = Tetris
-  { matrix :: Matrix,
-    player :: Player
+  { rows :: [Row],
+    tetromino :: Maybe Tetromino,
+    player :: Player,
+    isPaused :: Bool
   }
-
--- | Action which moves the current tetromino.
-data MoveAction = Left | Right | Down | Rotate | RotateCC
-
--- | Action by the player.
-data ActionInput = Move MoveAction | Drop | Swap
-
--- | An action affecting the control flow of the game.
-data ControlAction = None | Pause
-
--- | Input performed by player.
-data Input = Control ControlAction | Action ActionInput
 
 --------------------------------- Show ---------------------------------
 
 instance Show Tetris where
-  show (Tetris m p) = show m
+  show tetris = concatMap ((++ "\n") . concatMap showCell) (enumerateMatrix (rows tetris))
+    where
+      showCell :: (Position, Cell) -> String
+      showCell (p, c) | maybe False (`contains` p) (tetromino tetris) = "o"
+      showCell (_, Nothing) = "."
+      showCell (_, Just _) = "*"
 
---------------------------------- Functions ---------------------------------
-
-spawn :: Tetris -> Tetris
-spawn ts@(Tetris m p) =
-  let (p', t) = fromQueue (rows m) p
-   in case tetromino m of
-        Nothing -> Tetris (current (Just t) m) p' {canHold = True}
-        _ -> ts
-
-swap :: Tetris -> Tetris
-swap (Tetris m p) | not $ canHold p = Tetris m p
-swap (Tetris m p) =
-  let (pHolding, tHeld) = hold (rows m) (tetromino m) p
-      (pSpawned, tSpawned) = fromQueue (rows m) pHolding
-   in case tHeld of
-        Nothing -> Tetris (current (Just tSpawned) m) pSpawned
-        _ -> Tetris (current tHeld m) pHolding
-
-rotate :: Tetris -> Tetris
-rotate (Tetris m p) =
-  case tetromino m of
-    Just t -> Tetris m {tetromino = Just $ Tetromino.rotate t} p
-    Nothing -> Tetris m p
-
-rotateCC :: Tetris -> Tetris
-rotateCC (Tetris m p) =
-  case tetromino m of
-    Just t -> Tetris m {tetromino = Just $ Tetromino.rotateCC t} p
-    Nothing -> Tetris m p
-
-move :: (Int, Int) -> Tetris -> Tetris
-move dir (Tetris m p) =
-  case tetromino m of
-    Just t -> Tetris m {tetromino = Just $ Tetromino.move dir (rows m) t} p
-    Nothing -> Tetris m p
-
-drop :: Tetris -> Tetris
-drop (Tetris m p) =
-  case tetromino m of
-    Just t -> spawn $ Tetris m {rows = Tetromino.drop (rows m) t, tetromino = Nothing} p
-    Nothing -> Tetris m p
-
-delete :: Tetris -> Tetris
-delete (Tetris m p) = Tetris m {tetromino = Nothing} p
+--------------------------------- Step ---------------------------------
 
 step :: Tetris -> Tetris
-step ts@(Tetris m p) =
-  case tetromino m of
-    Nothing -> ts
-    Just t -> spawn $ Tetris m {rows = rows''} {tetromino = t'} p {score = score p + clearedScore}
-      where
-        (rows'', clearedScore) = clearRows rows'
-        (rows', t') = fall (rows m) t
+step tetris
+  | isPaused tetris = tetris
+  | otherwise = stepGameOver . stepSpawn . stepClear . stepFall $ tetris
 
-refill :: StdGen -> Tetris -> Tetris
-refill g (Tetris m p) = Tetris m p { queue = q }
+stepR :: StdGen -> Tetris -> (Tetris, StdGen)
+stepR = stepQueue
+
+stepGameOver :: Tetris -> Tetris
+stepGameOver tetris
+  | isGameOver (rows tetris) = newTetris
+  | otherwise = tetris
+
+stepQueue :: StdGen -> Tetris -> (Tetris, StdGen)
+stepQueue g tetris = (tetris {player = p}, g')
   where
-    (q, g') = refillQueue g (queue p)
+    (p, g') = populateQueue g (player tetris)
 
-update :: StdGen -> Input -> Tetris -> Tetris
-update g (Action Swap) = refill g . swap
-update g (Action (Move Rotate)) = refill g . Tetris.rotate
-update g (Action (Move RotateCC)) = refill g . Tetris.rotateCC
-update g (Action (Move Tetris.Left)) = refill g . Tetris.move left
-update g (Action (Move Tetris.Right)) = refill g . Tetris.move right
-update g (Action Drop) = refill g . Tetris.drop
-update g _ = refill g . step
+stepClear :: Tetris -> Tetris
+stepClear tetris = tetris {rows = rows'}
+  where
+    (rows', nCleared) = clear (rows tetris)
+
+stepFall :: Tetris -> Tetris
+stepFall tetris = fromMaybe tetris tetris'
+  where
+    r = Tetromino.fall (rows tetris) <$> tetromino tetris
+    tetris' = (\(rows, t) -> tetris {rows = rows, tetromino = t}) <$> r
+
+stepSpawn :: Tetris -> Tetris
+stepSpawn = stepP (isNothing . tetromino) f
+  where
+    f tetris = tetris'
+      where
+        (p', tf) = next (player tetris)
+        t = tf $ origin (rows tetris)
+        tetris' = tetris {player = p', tetromino = Just t}
+
+stepP :: (p -> Bool) -> (p -> p) -> p -> p
+stepP p f tetris
+  | p tetris = f tetris
+  | otherwise = tetris
+
+--------------------------------- Actions ---------------------------------
+
+swap :: Tetris -> Tetris
+swap tetris | not (canHold $ player tetris) = tetris
+swap tetris = tetris'
+  where
+    (p, tf) = Player.swap (tetromino tetris) (player tetris)
+    t = tf (origin $ rows tetris)
+    tetris' = tetris {player = p, tetromino = Just t}
+
+move :: (Int, Int) -> Tetris -> Tetris
+move direction tetris = tetris'
+  where
+    t = Tetromino.move direction (rows tetris) <$> tetromino tetris
+    tetris' = tetris {tetromino = t}
+
+drop :: Tetris -> Tetris
+drop tetris = fromMaybe tetris tetris'
+  where
+    r = Tetromino.drop (rows tetris) <$> tetromino tetris
+    tetris' = (\rows' -> tetris {rows = rows', tetromino = Nothing}) <$> r
+
+rotate :: Tetris -> Tetris
+rotate tetris = tetris'
+  where
+    t = Tetromino.rotate (rows tetris) <$> tetromino tetris
+    tetris' = tetris {tetromino = t}
+
+rotateCC :: Tetris -> Tetris
+rotateCC tetris = tetris'
+  where
+    t = Tetromino.rotateCC (rows tetris) <$> tetromino tetris
+    tetris' = tetris {tetromino = t}
+
+togglePause :: Tetris -> Tetris
+togglePause tetris = tetris {isPaused = not (isPaused tetris)}
+
+fall :: Tetris -> Tetris
+fall = stepFall
 
 --------------------------------- Constructors ---------------------------------
 
-tetris :: StdGen -> (Tetris, StdGen)
-tetris g = (spawn $ Tetris newMatrix p, g')
-  where
-    (p, g') = randomPlayer g
+newTetris :: Tetris
+newTetris = Tetris (matrix (20, 10) Nothing) Nothing newPlayer False

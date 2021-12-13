@@ -1,59 +1,101 @@
-module Player where
+module Player
+  ( Player (queue),
+    newPlayer,
+    swap,
+    next,
+    populateQueue,
+    canHold,
+    held,
+  )
+where
 
-import Data.Bifunctor (Bifunctor (second))
-import Matrix (Score, origin)
-import System.Random (StdGen, newStdGen)
-import Tetromino (Row, Tetromino (Tetromino), tetrominos)
+import Data.Bifunctor (Bifunctor (first, second))
+import Rows (Row, origin)
+import System.Random (StdGen)
+import Tetromino (Tetromino, tetrominos)
 import Utilities (At (at), Position, shuffle)
 
 --------------------------------- Types ---------------------------------
 
--- | Queue of tetrominos.
-type Queue = [Position -> Tetromino]
-
 -- | The state of the player.
 data Player = Player
-  { held :: Maybe Tetromino,
+  { held :: Maybe TFactory,
     canHold :: Bool,
     queue :: Queue,
     score :: Score
   }
 
---------------------------------- Functions ---------------------------------
+-- |
+type Queue = [TFactory]
+
+-- |
+type TFactory = Position -> Tetromino
+
+-- |
+type Score = Int
+
+--------------------------------- Queue ---------------------------------
+
+-- | Refills the queue with new tetrominos if neccessary.
+refill :: StdGen -> Queue -> (Queue, StdGen)
+refill g q
+  | length q < length tetrominos = first (q++) $ random g
+  | otherwise = (q, g)
 
 -- | Returns the next tetromino in the queue.
-popQueue :: Player -> (Player, Position -> Tetromino)
-popQueue p = (p {queue = tail $ queue p}, head $ queue p)
-
-fromQueue :: [Row] -> Player -> (Player, Tetromino)
-fromQueue rows p = second ($ origin rows) (popQueue p)
-
-refillQueue :: StdGen -> Queue -> (Queue, StdGen)
-refillQueue g [] = randomQueue g
-refillQueue g q = (q, g)
-
-hold :: [Row] -> Maybe Tetromino -> Player -> (Player, Maybe Tetromino)
-hold _ _ p | not $ canHold p = error "hold: can't hold"
-hold rows t p = case t of
-  Just t' -> (p {held = Just $ t' `at` origin rows, canHold = False}, held p)
-  Nothing -> (p {canHold = False}, held p)
+pop :: Queue -> (Queue, Position -> Tetromino)
+pop q = (tail q, head q)
 
 -- | Returns a randomly shuffled queue with one of each tetromino.
-randomQueue :: StdGen -> (Queue, StdGen)
-randomQueue g = shuffle g tetrominos
+random :: StdGen -> (Queue, StdGen)
+random g = shuffle g tetrominos
 
--- | Returns a new player with a random queue.
-randomPlayer :: StdGen -> (Player, StdGen)
-randomPlayer g = (newPlayer q, g')
+--------------------------------- Player ---------------------------------
+
+swap :: Maybe Tetromino -> Player -> (Player, TFactory)
+swap tCurrent p =
+  let held = hold tCurrent p
+   in case snd held of
+        Nothing -> next (fst held)
+        Just t -> (fst held, t)
+
+-- |
+hold :: Maybe Tetromino -> Player -> (Player, Maybe TFactory)
+hold _ p | not $ canHold p = error "hold: can't hold"
+hold t p = case t of
+  Just t' -> (p {held = Just $ factory t', canHold = False}, held p)
+  Nothing -> (p {canHold = False}, held p)
+
+-- |
+next :: Player -> (Player, TFactory)
+next p = (p {queue = q, canHold = True}, t)
   where
-    (q, g') = randomQueue g
+    (q, t) = pop (queue p)
+
+-- |
+populateQueue :: StdGen -> Player -> (Player, StdGen)
+populateQueue g p = (p {queue = q}, g')
+  where
+    (q, g') = refill g (queue p)
 
 -- | Returns a new player with the given queue.
-newPlayer :: Queue -> Player
-newPlayer q =
+newPlayer :: Player
+newPlayer =
   Player
-    { queue = q,
+    { queue = [],
       canHold = True,
       held = Nothing,
       score = 0
     }
+
+-- |
+factory :: Tetromino -> TFactory
+factory t p = t `at` p
+
+-- |
+scoreFromClearedLines :: Int -> Score
+scoreFromClearedLines 1 = 40
+scoreFromClearedLines 2 = 100
+scoreFromClearedLines 3 = 300
+scoreFromClearedLines 4 = 1200
+scoreFromClearedLines _ = 0

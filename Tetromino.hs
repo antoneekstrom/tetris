@@ -1,9 +1,22 @@
-module Tetromino where
+module Tetromino
+  ( Tetromino,
+    tetrominos,
+    fall,
+    color,
+    minos,
+    contains,
+    move,
+    Tetromino.drop,
+    rotate, 
+    rotateCC,
+    landing
+  )
+where
 
 import Data.Bifunctor (Bifunctor (second))
-import Data.Maybe (fromJust)
 import Maybes (isJust)
-import Utilities (Position, addp, getm, setm, withinBounds, At, at)
+import Rows (Row)
+import Utilities (At, Color (..), Position, addp, at, down, getm, setm, up, withinBounds)
 
 --------------------------------- Types ---------------------------------
 
@@ -16,26 +29,16 @@ data Tetromino = Tetromino
     center :: Position
   }
 
--- | A color.
-data Color = Cyan | Magenta | Yellow | Orange | Blue | Green | Red | White | Black
-  deriving (Eq, Show)
-
 -- | Piece of a tetromino.
 type Mino = (Int, Int)
 
 -- | Rotates a tetromino.
 type Rotate = Tetromino -> Tetromino
 
--- | Value of a cell.
-type Cell = Maybe Color
-
--- | Row of cells.
-type Row = [Cell]
-
 --------------------------------- At ---------------------------------
 
 instance At Tetromino where
-  t `at` c = t { center = c }
+  t `at` c = t {center = c}
 
 --------------------------------- Functions ---------------------------------
 
@@ -56,35 +59,38 @@ isLegal f rows t = all (withinBounds rows) (minos t') && not (isColliding rows t
   where
     t' = f t
 
--- |
-translate :: (Int, Int) -> [Row] -> Tetromino -> Tetromino
-translate d rows t = t {center = center t `addp` d}
+ifLegal :: (Tetromino -> Tetromino) -> [Row] -> Tetromino -> Tetromino
+ifLegal f rows t = if isLegal f rows t then t' else t
+  where
+    t' = f t
 
--- |
+-- | Translates the center of a tetromino.
+translate :: (Int, Int) -> Tetromino -> Tetromino
+translate d t = t {center = center t `addp` d}
+
+-- | Returns true if the tetromino can be moved.
 canMove :: (Int, Int) -> [Row] -> Tetromino -> Bool
-canMove d rows = isLegal (translate d rows) rows
+canMove d = isLegal (translate d)
 
+-- | Moves a tetromino.
 move :: (Int, Int) -> [Row] -> Tetromino -> Tetromino
 move dir rows t
   | dir == down || dir == up = error "move: Can only move left and right."
-  | canMove dir rows t = translate dir rows t
-  | otherwise = t
-
---------------------------------- Matrix ---------------------------------
+  | otherwise = ifLegal (translate dir) rows t
 
 -- | Moves the tetromino down.
 fall :: [Row] -> Tetromino -> ([Row], Maybe Tetromino)
 fall rows t
-  | canMove down rows t = (rows, Just $ translate down rows t)
+  | canMove down rows t = (rows, Just $ translate down t)
   | otherwise = (lock rows t, Nothing)
 
 -- | Returns the tetromino where it would be if it would fall all the way down.
 landing :: [Row] -> Tetromino -> Tetromino
 landing rows t =
   let (rows', t') = fall rows t
-  in case t' of
-    Nothing -> t
-    Just t'' -> landing rows' t''
+   in case t' of
+        Nothing -> t
+        Just t'' -> landing rows' t''
 
 -- | Fills the matrix with the tetromino.
 lock :: [Row] -> Tetromino -> [Row]
@@ -102,7 +108,6 @@ drop rows t = lock rows (landing rows t)
 rotatePivot' :: Bool -> Tetromino -> Tetromino
 rotatePivot' cc t = t {offsets = map rotate (offsets t)}
   where
-    rotate :: Position -> Position
     rotate (row, col) = (col, - row)
 
 rotatePivot :: Tetromino -> Tetromino
@@ -111,11 +116,11 @@ rotatePivot = rotatePivot' False
 rotatePivotCC :: Tetromino -> Tetromino
 rotatePivotCC = rotatePivot' True
 
-rotate :: Tetromino -> Tetromino
-rotate t = getRotate t t
+rotate :: [Row] -> Tetromino -> Tetromino
+rotate rows t = ifLegal (getRotate t) rows t
 
-rotateCC :: Tetromino -> Tetromino
-rotateCC t = getRotateCC t t
+rotateCC :: [Row] -> Tetromino -> Tetromino
+rotateCC rows t = ifLegal (getRotateCC t) rows t
 
 --------------------------------- Tetrominos ---------------------------------
 
@@ -143,17 +148,3 @@ z' = Tetromino Red rotatePivot rotatePivotCC [(1, 0), (0, 0), (1, 1), (0, -1)]
 
 tetrominos :: [Position -> Tetromino]
 tetrominos = [i', t', o', j', l', s', z']
-
---------------------------------- Directions ---------------------------------
-
-down :: Num a => (a, a)
-down = (1, 0)
-
-up :: Num a => (a, a)
-up = (-1, 0)
-
-left :: Num a => (a, a)
-left = (0, -1)
-
-right :: Num a => (a, a)
-right = (0, 1)
