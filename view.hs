@@ -11,7 +11,7 @@ import Tetris
 import Tetromino
 import Utilities (enumerateMatrix)
 
-cellSize = 20
+cellSize = 30
 
 windowSize = (10 * cellSize, 20 * cellSize)
 

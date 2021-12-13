@@ -81,8 +81,9 @@ step :: Tetris -> Tetris
 step ts@(Tetris m p) =
   case tetromino m of
     Nothing -> ts
-    Just t -> spawn $ Tetris m {rows = rows'} {tetromino = t'} p
+    Just t -> spawn $ Tetris m {rows = rows''} {tetromino = t'} p {score = score p + clearedScore}
       where
+        (rows'', clearedScore) = clearRows rows'
         (rows', t') = fall (rows m) t
 
 populateQueue :: Tetris -> Queue -> Tetris

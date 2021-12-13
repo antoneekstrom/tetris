@@ -39,7 +39,7 @@ randomQueue :: IO Queue
 randomQueue =
   do
     f <- shuffle <$> newStdGen
-    return (f tetrominos)
+    return (f tetrominos++tetrominos++tetrominos)
 
 -- | Returns a new player with a random queue.
 randomPlayer :: IO Player

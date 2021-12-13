@@ -130,10 +130,10 @@ o' :: Position -> Tetromino
 o' = Tetromino Yellow id id [(0, 0), (1, 0), (0, 1), (1, 1)]
 
 j' :: Position -> Tetromino
-j' = Tetromino Orange rotatePivot rotatePivotCC [(1, 0), (0, 0), (1, 1), (2, 1)]
+j' = Tetromino Orange rotatePivot rotatePivotCC [(0, -1), (0, 0), (0, 1), (-1, 1)]
 
 l' :: Position -> Tetromino
-l' = Tetromino Blue rotatePivot rotatePivotCC [(0, 0), (1, 0), (2, 0), (1, 1)]
+l' = Tetromino Blue rotatePivot rotatePivotCC [(0, -1), (0, 0), (0, 1), (1, 1)]
 
 s' :: Position -> Tetromino
 s' = Tetromino Green rotatePivot rotatePivotCC [(1, 0), (0, 0), (1, -1), (0, 1)]

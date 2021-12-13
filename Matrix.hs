@@ -38,7 +38,7 @@ clearRows rows = (replicate cleared (replicate rowLen Nothing) ++ remaining, sco
     score 2 = 100
     score 3 = 300
     score 4 = 1200
-    score _ = -1
+    score _ = 0
 
 -- |
 origin :: [Row] -> Position
