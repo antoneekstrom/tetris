@@ -28,6 +28,10 @@ popQueue p = (p {queue = tail $ queue p}, head $ queue p)
 fromQueue :: [Row] -> Player -> (Player, Tetromino)
 fromQueue rows p = second ($ origin rows) (popQueue p)
 
+refillQueue :: StdGen -> Queue -> (Queue, StdGen)
+refillQueue g [] = randomQueue g
+refillQueue g q = (q, g)
+
 hold :: [Row] -> Maybe Tetromino -> Player -> (Player, Maybe Tetromino)
 hold _ _ p | not $ canHold p = error "hold: can't hold"
 hold rows t p = case t of
@@ -35,15 +39,14 @@ hold rows t p = case t of
   Nothing -> (p {canHold = False}, held p)
 
 -- | Returns a randomly shuffled queue with one of each tetromino.
-randomQueue :: IO Queue
-randomQueue =
-  do
-    f <- shuffle <$> newStdGen
-    return (f tetrominos++tetrominos++tetrominos)
+randomQueue :: StdGen -> (Queue, StdGen)
+randomQueue g = shuffle g tetrominos
 
 -- | Returns a new player with a random queue.
-randomPlayer :: IO Player
-randomPlayer = newPlayer <$> randomQueue
+randomPlayer :: StdGen -> (Player, StdGen)
+randomPlayer g = (newPlayer q, g')
+  where
+    (q, g') = randomQueue g
 
 -- | Returns a new player with the given queue.
 newPlayer :: Queue -> Player

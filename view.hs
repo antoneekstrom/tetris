@@ -10,6 +10,7 @@ import Matrix
 import Tetris
 import Tetromino
 import Utilities (enumerateMatrix)
+import System.Random (newStdGen, StdGen)
 
 cellSize = 30
 
@@ -27,27 +28,28 @@ renderCells ts = renderBlocks $ concat $ enumerateMatrix (rows $ matrix ts)
 
 renderTetromino t = renderBlocks $ map (,Just $ Tetromino.color t) $ minos t
 
-handleInput :: Event -> Tetris -> Tetris
-handleInput (EventKey key Graphics.Gloss.Interface.IO.Game.Down modifiers _) ts =
+handleInput :: StdGen -> Event -> Tetris -> Tetris
+handleInput g (EventKey key Graphics.Gloss.Interface.IO.Game.Down modifiers _) ts =
   case key of
-    (SpecialKey KeyRight) -> update (Action $ Move Tetris.Right) ts
-    (SpecialKey KeyLeft) -> update (Action $ Move Tetris.Left) ts
-    (SpecialKey KeyUp) -> update (Action $ Move Tetris.Rotate) ts
-    (SpecialKey KeyDown) -> update (Control None) ts
-    (SpecialKey KeySpace) -> update (Action Drop) ts
-    (Char 'c') -> update (Action Swap) ts
-    (SpecialKey KeyShiftL) -> update (Action Swap) ts
+    (SpecialKey KeyRight) -> update g (Action $ Move Tetris.Right) ts
+    (SpecialKey KeyLeft) -> update g (Action $ Move Tetris.Left) ts
+    (SpecialKey KeyUp) -> update g (Action $ Move Tetris.Rotate) ts
+    (SpecialKey KeyDown) -> update g (Control None) ts
+    (SpecialKey KeySpace) -> update g (Action Drop) ts
+    (Char 'c') -> update g (Action Swap) ts
+    (SpecialKey KeyShiftL) -> update g (Action Swap) ts
     _ -> ts
-handleInput _ ts = ts
+handleInput _ _ ts = ts
 
-step :: Float -> Tetris -> Tetris
-step i = update (Control None)
+step :: StdGen -> Float -> Tetris -> Tetris
+step g i = update g (Control None)
 
 main :: IO ()
 main =
   do
-    ts <- tetris
-    play window black 2 ts view handleInput View.step
+    g' <- newStdGen
+    let (ts, g) = tetris g'
+    play window black 2 (fst $ tetris g) view (handleInput g) (View.step g)
 
 renderBlock :: (Int, Int) -> Float -> Tetromino.Color -> Picture
 renderBlock pos size color = Color (getColor color) $ View.translate pos size $ square size
