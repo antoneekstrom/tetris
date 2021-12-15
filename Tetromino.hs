@@ -16,6 +16,7 @@ where
 import Data.Bifunctor (Bifunctor (second))
 import Maybes (isJust)
 import Rows (Row)
+import Test.QuickCheck (Arbitrary (arbitrary), Gen, elements, oneof)
 import Utilities (At, Color (..), Position, addp, at, down, getm, setm, up, withinBounds)
 
 --------------------------------- Types ---------------------------------
@@ -148,3 +149,15 @@ z' = Tetromino Red rotatePivot rotatePivotCC [(1, 0), (0, 0), (1, 1), (0, -1)]
 
 tetrominos :: [Position -> Tetromino]
 tetrominos = [i', t', o', j', l', s', z']
+
+--------------------------------- QuickCheck ---------------------------------
+
+tfGen :: Gen (Position -> Tetromino)
+tfGen = elements tetrominos
+
+tGen :: Position -> Gen Tetromino
+tGen pos = ($ pos) <$> tfGen
+
+instance Arbitrary Tetromino where
+  arbitrary = tGen (0, 0)
+  

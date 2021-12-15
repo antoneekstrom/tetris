@@ -9,6 +9,7 @@ module Player
     addLinesCleared,
     level,
     score,
+    linesCleared
   )
 where
 
@@ -86,7 +87,7 @@ populateQueue g p = (p {queue = q}, g')
   where
     (q, g') = refill g (queue p)
 
--- | 
+-- |
 scoreFromLines :: Level -> Int -> Score
 scoreFromLines l 1 = 40 * (l + 1)
 scoreFromLines l 2 = 120 * (l + 1)
@@ -102,7 +103,7 @@ addLinesCleared n p =
       score = score p + scoreFromLines (level p) n
     }
 
--- | 
+-- |
 level :: Player -> Level
 level p = linesCleared p `div` 10
 

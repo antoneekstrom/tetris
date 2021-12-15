@@ -19,8 +19,8 @@ clear rows = (replicate cleared (replicate rowLen Nothing) ++ remaining, cleared
 
 -- |
 origin :: [Row] -> Position
-origin rows = (2, length (head rows) `div` 2)
+origin rows = (1, length (head rows) `div` 2)
 
 -- | Returns true if the game is over.
 isGameOver :: [Row] -> Bool
-isGameOver = any isJust . (!! 3)
+isGameOver = any isJust . head

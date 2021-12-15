@@ -47,36 +47,48 @@ instance Show Tetris where
 
 --------------------------------- Step ---------------------------------
 
+-- |
 step :: Tetris -> Tetris
 step tetris
   | isPaused tetris = tetris
-  | not $ isTime tetris = tetris
-  | otherwise = consumeTime . stepGameOver . stepSpawn . stepClear . stepFall $ tetris
+  | otherwise = stepGameOver . stepSpawn . stepClear . stepT $ tetris
 
+-- |
 stepR :: StdGen -> Tetris -> (Tetris, StdGen)
 stepR = stepQueue
 
-stepGameOver :: Tetris -> Tetris
-stepGameOver tetris
-  | isGameOver (rows tetris) = newTetris
-  | otherwise = tetris
+-- |
+stepT :: Tetris -> Tetris
+stepT tetris
+  | not $ isTime tetris = tetris
+  | otherwise = consumeTime . stepFall $ tetris
 
-stepQueue :: StdGen -> Tetris -> (Tetris, StdGen)
-stepQueue g tetris = (tetris {player = p}, g')
-  where
-    (p, g') = populateQueue g (player tetris)
-
-stepClear :: Tetris -> Tetris
-stepClear tetris = tetris {rows = rows', player = addLinesCleared nCleared (player tetris)}
-  where
-    (rows', nCleared) = clear (rows tetris)
-
+-- |
 stepFall :: Tetris -> Tetris
 stepFall tetris = fromMaybe tetris tetris'
   where
     r = Tetromino.fall (rows tetris) <$> tetromino tetris
     tetris' = (\(rows, t) -> tetris {rows = rows, tetromino = t}) <$> r
 
+-- |
+stepGameOver :: Tetris -> Tetris
+stepGameOver tetris
+  | isGameOver (rows tetris) = newTetris
+  | otherwise = tetris
+
+-- |
+stepQueue :: StdGen -> Tetris -> (Tetris, StdGen)
+stepQueue g tetris = (tetris {player = p}, g')
+  where
+    (p, g') = populateQueue g (player tetris)
+
+-- |
+stepClear :: Tetris -> Tetris
+stepClear tetris = tetris {rows = rows', player = addLinesCleared nCleared (player tetris)}
+  where
+    (rows', nCleared) = clear (rows tetris)
+
+-- |
 stepSpawn :: Tetris -> Tetris
 stepSpawn = stepP (isNothing . tetromino) f
   where
@@ -86,9 +98,13 @@ stepSpawn = stepP (isNothing . tetromino) f
         t = tf $ origin (rows tetris)
         tetris' = tetris {player = p', tetromino = Just t}
 
+-- |
 stepTime :: Float -> Tetris -> Tetris
-stepTime t tetris = tetris {time = time tetris + t}
+stepTime t tetris
+  | isPaused tetris = tetris
+  | otherwise = tetris {time = time tetris + t}
 
+-- |
 stepP :: (p -> Bool) -> (p -> p) -> p -> p
 stepP p f tetris
   | p tetris = f tetris
@@ -96,6 +112,7 @@ stepP p f tetris
 
 --------------------------------- Actions ---------------------------------
 
+-- |
 swap :: Tetris -> Tetris
 swap tetris | not (canHold $ player tetris) = tetris
 swap tetris = tetris'
@@ -104,49 +121,61 @@ swap tetris = tetris'
     t = tf (origin $ rows tetris)
     tetris' = tetris {player = p, tetromino = Just t}
 
+-- |
 move :: (Int, Int) -> Tetris -> Tetris
 move direction tetris = tetris'
   where
     t = Tetromino.move direction (rows tetris) <$> tetromino tetris
     tetris' = tetris {tetromino = t}
 
+-- |
 drop :: Tetris -> Tetris
 drop tetris = fromMaybe tetris tetris'
   where
     r = Tetromino.drop (rows tetris) <$> tetromino tetris
     tetris' = (\rows' -> tetris {rows = rows', tetromino = Nothing}) <$> r
 
+-- |
 rotate :: Tetris -> Tetris
 rotate tetris = tetris'
   where
     t = Tetromino.rotate (rows tetris) <$> tetromino tetris
     tetris' = tetris {tetromino = t}
 
+-- |
 rotateCC :: Tetris -> Tetris
 rotateCC tetris = tetris'
   where
     t = Tetromino.rotateCC (rows tetris) <$> tetromino tetris
     tetris' = tetris {tetromino = t}
 
+-- |
 togglePause :: Tetris -> Tetris
 togglePause tetris = tetris {isPaused = not (isPaused tetris)}
 
+-- |
 fall :: Tetris -> Tetris
 fall = stepFall
 
+-- |
 isTime :: Tetris -> Bool
 isTime tetris = time tetris >= timeStep tetris
 
+-- |
 timeStep :: Tetris -> Float
 timeStep tetris = max (2 / frameRate) $ (frameRate - (l * 2)) / frameRate
   where
     frameRate = 60
     l = fromIntegral $ level $ player tetris
 
+-- |
 consumeTime :: Tetris -> Tetris
 consumeTime tetris = tetris {time = time tetris - timeStep tetris}
 
 --------------------------------- Constructors ---------------------------------
 
+-- |
 newTetris :: Tetris
 newTetris = Tetris (matrix (20, 10) Nothing) Nothing newPlayer False 0
+
+--------------------------------- QuickCheck ---------------------------------
