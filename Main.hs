@@ -16,28 +16,19 @@ import Graphics.Gloss.Interface.IO.Game
   ( Event (EventKey),
     Key (Char, SpecialKey),
     KeyState (Down),
-    SpecialKey (KeyDown, KeyLeft, KeyRight, KeyShiftL, KeySpace, KeyUp, KeyEsc),
+    SpecialKey (KeyDown, KeyEsc, KeyLeft, KeyRight, KeyShiftL, KeySpace, KeyUp),
   )
-import Player (Player (queue), held)
+import Player (Player (queue, score), held)
 import Rows (Row)
 import System.Random (StdGen, newStdGen)
-import Tetris (Tetris, newTetris, player, rows, step, stepR, tetromino)
+import Tetris (Tetris (time), newTetris, player, rows, step, stepR, stepTime, tetromino)
 import Tetromino (Tetromino, color, landing, minos)
 import Utilities (Color (..), Position, enumerate, enumerateMatrix)
 import Prelude hiding (translate)
 
--- handleInput :: StdGen -> Event -> Tetris -> Tetris
--- handleInput g (EventKey key Graphics.Gloss.Interface.IO.Game.Down modifiers _) ts =
---   case key of
---     (SpecialKey KeyRight) -> update g (Action $ Move Right) ts
---     (SpecialKey KeyLeft) -> update g (Action $ Move Left) ts
---     (SpecialKey KeyUp) -> update g (Action $ Move Rotate) ts
---     (SpecialKey KeyDown) -> update g (Control None) ts
---     (SpecialKey KeySpace) -> update g (Action Drop) ts
---     (Char 'c') -> update g (Action Swap) ts
---     (SpecialKey KeyShiftL) -> update g (Action Swap) ts
---     _ -> ts
--- handleInput _ _ ts = ts
+--------------------------------- Types ---------------------------------
+
+type World = (Tetris, StdGen)
 
 --------------------------------- Constants ---------------------------------
 
@@ -58,31 +49,30 @@ window = InWindow "Tetris" windowSize (10, 10)
 main :: IO ()
 main =
   do
-    g <- newStdGen
-    play window black 2 world view input (update' g)
-  where
-    update' g = \f tetris -> fst $ update g f tetris
+    w <- world
+    play window black 60 w view input update
 
-update :: StdGen -> Float -> Tetris -> (Tetris, StdGen)
-update g _ = first Tetris.step . Tetris.stepR g
+update :: Float -> World -> World
+update t (tetris, g) = first (step . stepTime t) $ stepR g tetris
 
-world :: Tetris
-world = newTetris
+world :: IO World
+world = (newTetris,) <$> newStdGen
 
-view :: Tetris -> Picture
-view tetris =
+view :: World -> Picture
+view w =
   Pictures $
     map
-      ($ tetris)
+      ($ fst w)
       [ renderCells,
         renderLanding,
         renderCurrentTetromino,
         renderQueue,
-        renderHold
+        renderHold,
+        Scale 0.1 0.1 . Text . show . score . player
       ]
 
-input :: Event -> Tetris -> Tetris
-input e = Action.apply (actionFromInput e)
+input :: Event -> World -> World
+input e = first (Action.apply (actionFromInput e))
 
 actionFromInput :: Event -> Action.Action
 actionFromInput (EventKey key Down _ _) =
@@ -90,8 +80,11 @@ actionFromInput (EventKey key Down _ _) =
     -- Move with arrow keys
     (SpecialKey KeyRight) -> Action.Input (Action.Move Action.Right)
     (SpecialKey KeyLeft) -> Action.Input (Action.Move Action.Left)
-    (SpecialKey KeyUp) -> Action.Input (Action.Move Action.Rotate)
     (SpecialKey KeyDown) -> Action.Input (Action.Move Action.Down)
+    -- Rotate
+    (SpecialKey KeyUp) -> Action.Input (Action.Move Action.Rotate)
+    (Char 'z') -> Action.Input (Action.Move Action.RotateCC)
+    (Char 'x') -> Action.Input (Action.Move Action.Rotate)
     -- Hold / Swap
     (SpecialKey KeyShiftL) -> Action.Input Action.Swap
     (Char 'c') -> Action.Input Action.Swap

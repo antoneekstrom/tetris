@@ -1,7 +1,7 @@
 module Rows where
 
-import Utilities (Color (..), Position)
 import Data.Maybe (isJust)
+import Utilities (Color (..), Position)
 
 -- | Value of a cell.
 type Cell = Maybe Color
@@ -19,8 +19,8 @@ clear rows = (replicate cleared (replicate rowLen Nothing) ++ remaining, cleared
 
 -- |
 origin :: [Row] -> Position
-origin rows = (0, length (head rows) `div` 2)
+origin rows = (2, length (head rows) `div` 2)
 
 -- | Returns true if the game is over.
 isGameOver :: [Row] -> Bool
-isGameOver = any isJust . (!!3)
+isGameOver = any isJust . (!! 3)

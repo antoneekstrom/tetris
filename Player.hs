@@ -6,6 +6,9 @@ module Player
     populateQueue,
     canHold,
     held,
+    addLinesCleared,
+    level,
+    score,
   )
 where
 
@@ -22,6 +25,7 @@ data Player = Player
   { held :: Maybe TFactory,
     canHold :: Bool,
     queue :: Queue,
+    linesCleared :: Int,
     score :: Score
   }
 
@@ -34,12 +38,15 @@ type TFactory = Position -> Tetromino
 -- |
 type Score = Int
 
+-- |
+type Level = Int
+
 --------------------------------- Queue ---------------------------------
 
 -- | Refills the queue with new tetrominos if neccessary.
 refill :: StdGen -> Queue -> (Queue, StdGen)
 refill g q
-  | length q < length tetrominos = first (q++) $ random g
+  | length q < length tetrominos = first (q ++) $ random g
   | otherwise = (q, g)
 
 -- | Returns the next tetromino in the queue.
@@ -52,6 +59,7 @@ random g = shuffle g tetrominos
 
 --------------------------------- Player ---------------------------------
 
+-- |
 swap :: Maybe Tetromino -> Player -> (Player, TFactory)
 swap tCurrent p =
   let held = hold tCurrent p
@@ -78,6 +86,26 @@ populateQueue g p = (p {queue = q}, g')
   where
     (q, g') = refill g (queue p)
 
+-- | 
+scoreFromLines :: Level -> Int -> Score
+scoreFromLines l 1 = 40 * (l + 1)
+scoreFromLines l 2 = 120 * (l + 1)
+scoreFromLines l 3 = 300 * (l + 1)
+scoreFromLines l 4 = 1200 * (l + 1)
+scoreFromLines _ _ = 0
+
+-- |
+addLinesCleared :: Int -> Player -> Player
+addLinesCleared n p =
+  p
+    { linesCleared = linesCleared p + n,
+      score = score p + scoreFromLines (level p) n
+    }
+
+-- | 
+level :: Player -> Level
+level p = linesCleared p `div` 10
+
 -- | Returns a new player with the given queue.
 newPlayer :: Player
 newPlayer =
@@ -85,17 +113,10 @@ newPlayer =
     { queue = [],
       canHold = True,
       held = Nothing,
+      linesCleared = 0,
       score = 0
     }
 
 -- |
 factory :: Tetromino -> TFactory
 factory t p = t `at` p
-
--- |
-scoreFromClearedLines :: Int -> Score
-scoreFromClearedLines 1 = 40
-scoreFromClearedLines 2 = 100
-scoreFromClearedLines 3 = 300
-scoreFromClearedLines 4 = 1200
-scoreFromClearedLines _ = 0

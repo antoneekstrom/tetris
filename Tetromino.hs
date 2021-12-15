@@ -7,9 +7,9 @@ module Tetromino
     contains,
     move,
     Tetromino.drop,
-    rotate, 
+    rotate,
     rotateCC,
-    landing
+    landing,
   )
 where
 

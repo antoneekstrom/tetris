@@ -9,13 +9,15 @@ module Tetris
     rotate,
     rotateCC,
     fall,
-    togglePause
+    togglePause,
+    stepTime,
+    time,
   )
 where
 
 import Data.Bifunctor (Bifunctor (second))
 import Data.Maybe (fromMaybe, isNothing)
-import Player (Player (canHold), newPlayer, next, populateQueue, swap)
+import Player (Player (canHold), addLinesCleared, level, newPlayer, next, populateQueue, swap)
 import Rows (Cell, Row, clear, isGameOver, origin)
 import System.Random (StdGen)
 import Tetromino (Tetromino, contains)
@@ -29,7 +31,8 @@ data Tetris = Tetris
   { rows :: [Row],
     tetromino :: Maybe Tetromino,
     player :: Player,
-    isPaused :: Bool
+    isPaused :: Bool,
+    time :: Float
   }
 
 --------------------------------- Show ---------------------------------
@@ -47,7 +50,8 @@ instance Show Tetris where
 step :: Tetris -> Tetris
 step tetris
   | isPaused tetris = tetris
-  | otherwise = stepGameOver . stepSpawn . stepClear . stepFall $ tetris
+  | not $ isTime tetris = tetris
+  | otherwise = consumeTime . stepGameOver . stepSpawn . stepClear . stepFall $ tetris
 
 stepR :: StdGen -> Tetris -> (Tetris, StdGen)
 stepR = stepQueue
@@ -63,7 +67,7 @@ stepQueue g tetris = (tetris {player = p}, g')
     (p, g') = populateQueue g (player tetris)
 
 stepClear :: Tetris -> Tetris
-stepClear tetris = tetris {rows = rows'}
+stepClear tetris = tetris {rows = rows', player = addLinesCleared nCleared (player tetris)}
   where
     (rows', nCleared) = clear (rows tetris)
 
@@ -81,6 +85,9 @@ stepSpawn = stepP (isNothing . tetromino) f
         (p', tf) = next (player tetris)
         t = tf $ origin (rows tetris)
         tetris' = tetris {player = p', tetromino = Just t}
+
+stepTime :: Float -> Tetris -> Tetris
+stepTime t tetris = tetris {time = time tetris + t}
 
 stepP :: (p -> Bool) -> (p -> p) -> p -> p
 stepP p f tetris
@@ -127,7 +134,19 @@ togglePause tetris = tetris {isPaused = not (isPaused tetris)}
 fall :: Tetris -> Tetris
 fall = stepFall
 
+isTime :: Tetris -> Bool
+isTime tetris = time tetris >= timeStep tetris
+
+timeStep :: Tetris -> Float
+timeStep tetris = max (2 / frameRate) $ (frameRate - (l * 2)) / frameRate
+  where
+    frameRate = 60
+    l = fromIntegral $ level $ player tetris
+
+consumeTime :: Tetris -> Tetris
+consumeTime tetris = tetris {time = time tetris - timeStep tetris}
+
 --------------------------------- Constructors ---------------------------------
 
 newTetris :: Tetris
-newTetris = Tetris (matrix (20, 10) Nothing) Nothing newPlayer False
+newTetris = Tetris (matrix (20, 10) Nothing) Nothing newPlayer False 0

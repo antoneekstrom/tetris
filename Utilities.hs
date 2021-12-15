@@ -41,9 +41,9 @@ removeAt i xs = (uncurry (++) (second tail $ splitAt i xs), xs !! i)
 -- | Shuffles a list using the fisher-yates shuffle.
 shuffle :: StdGen -> [a] -> ([a], StdGen)
 shuffle g [] = ([], g)
-shuffle g xs = (aux g xs [], g)
+shuffle g xs = aux g xs []
   where
-    aux g [] result = result
+    aux g [] result = (result, g)
     aux g xs result = aux g' next (removed : result)
       where
         (next, removed) = removeAt i xs
