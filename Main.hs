@@ -18,7 +18,7 @@ import Graphics.Gloss.Interface.IO.Game
     KeyState (Down),
     SpecialKey (KeyDown, KeyEsc, KeyLeft, KeyRight, KeyShiftL, KeySpace, KeyUp),
   )
-import Player (Player (queue, score), held)
+import Player (Player (queue, score, linesCleared), held, level)
 import Rows (Row)
 import System.Random (StdGen, newStdGen)
 import Tetris (Tetris (time), newTetris, player, rows, step, stepR, stepTime, tetromino)
