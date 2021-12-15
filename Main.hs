@@ -63,13 +63,12 @@ view w =
   Pictures $
     map
       ($ fst w)
-      [ renderCells,
+      ([ renderCells,
         renderLanding,
         renderCurrentTetromino,
         renderQueue,
-        renderHold,
-        Scale 0.1 0.1 . Text . show . score . player
-      ]
+        renderHold
+      ] ++ renderText)
 
 input :: Event -> World -> World
 input e = first (Action.apply (actionFromInput e))
@@ -122,6 +121,18 @@ renderLanding :: Tetris -> Picture
 renderLanding tetris = maybe Blank (renderTetromino' (greyN 0.8) cellSize) landed
   where
     landed = landing (rows tetris) <$> tetromino tetris
+
+renderText :: [Tetris -> Picture]
+renderText = [renderScore, renderCleardLines, renderLevel]
+
+renderScore :: Tetris -> Picture
+renderScore = translate (-140) (-220) . Scale 0.1 0.1 . Text . ("Score: " ++) . show . score . player
+
+renderCleardLines :: Tetris -> Picture
+renderCleardLines = translate (-140) (-200) . Scale 0.1 0.1 . Text . ("Cleared lines: " ++) . show . linesCleared . player
+
+renderLevel :: Tetris -> Picture
+renderLevel = translate (-140) (-180) . Scale 0.1 0.1 . Text . ("Level: " ++) . show . level . player
 
 --------------------------------- Helpers ---------------------------------
 
