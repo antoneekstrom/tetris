@@ -41,11 +41,13 @@ previewSize = 8
 windowSize :: (Int, Int)
 windowSize = (10 * cellSize, 20 * cellSize)
 
+-- | Defines the display/windows name, size and location on the screen
 window :: Display
 window = InWindow "Tetris" windowSize (10, 10)
 
 --------------------------------- Main ---------------------------------
 
+-- The main function initialises a new tetris game with a truly random piece seed
 main :: IO ()
 main =
   do
@@ -58,6 +60,8 @@ update t (tetris, g) = first (step . stepTime t) $ stepR g tetris
 world :: IO World
 world = (newTetris,) <$> newStdGen
 
+-- | Renders all the different parts of the game onto the game window from the given world (world contains a tetris)
+-- | Turns all these different smaller pictures into one big picture using the "Pictures" function
 view :: World -> Picture
 view w =
   Pictures $
@@ -89,7 +93,7 @@ actionFromInput (EventKey key Down _ _) =
     (Char 'c') -> Action.Input Action.Swap
     -- Drop
     (SpecialKey KeySpace) -> Action.Input Action.Drop
-    -- Pause
+    -- Pauses
     (Char 'p') -> Action.Control Action.Pause
     (Char 'q') -> Action.Control Action.Pause
     _ -> Action.Control Action.None
@@ -103,6 +107,7 @@ renderCells tetris = renderBlocks cellSize $ map (second (maybe white getColor))
 renderCurrentTetromino :: Tetris -> Picture
 renderCurrentTetromino tetris = maybe Blank (renderTetromino cellSize) (tetromino tetris)
 
+-- | Takes 5 tetrominos from the queue and renders them but smaller in size.
 renderQueue :: Tetris -> Picture
 renderQueue tetris =
   translate (fromIntegral cellSize) (fromIntegral cellSize) $
@@ -142,9 +147,11 @@ renderTetromino size t = renderTetromino' (getColor $ Tetromino.color t) size t
 renderTetromino' :: Graphics.Gloss.Color -> Int -> Tetromino -> Picture
 renderTetromino' color size t = renderBlocks size $ map (,color) $ minos t
 
+-- | Renders several blocks and turns them into a picture
 renderBlocks :: Int -> [(Position, Graphics.Gloss.Color)] -> Picture
 renderBlocks size blocks = Pictures $ map (\((row, col), cell) -> renderBlock (col, row) size cell) blocks
 
+-- | Returns a picture of tetris block at a given position with a color
 renderBlock :: (Int, Int) -> Int -> Graphics.Gloss.Color -> Picture
 renderBlock pos size color = Color color $ uncenter size' $ translate' pos' $ square size'
   where
@@ -152,6 +159,9 @@ renderBlock pos size color = Color color $ uncenter size' $ translate' pos' $ sq
     pos' = bimap f f pos
     size' = fromIntegral size
 
+-- | Gloss uses a center-origin based coordinate system (similar to those found in mathematics)
+-- | However it is much easier to use a top left aligned coordinate system for this game
+-- | This method can move that a piece according to the top left system instead.
 uncenter :: Float -> Picture -> Picture
 uncenter size =
   translate' (bimap f f windowSize)
