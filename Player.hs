@@ -9,7 +9,7 @@ module Player
     addLinesCleared,
     level,
     score,
-    linesCleared
+    linesCleared,
   )
 where
 

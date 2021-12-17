@@ -18,7 +18,7 @@ where
 import Data.Bifunctor (Bifunctor (second))
 import Data.Maybe (fromMaybe, isNothing)
 import Player (Player (canHold), addLinesCleared, level, newPlayer, next, populateQueue, swap)
-import Rows (Cell, Row, clear, isGameOver, origin)
+import Rows (Cell, Row, clear, emptyRows, isGameOver, origin)
 import System.Random (StdGen)
 import Tetromino (Tetromino, contains)
 import qualified Tetromino (drop, fall, move, rotate, rotateCC)
@@ -47,17 +47,17 @@ instance Show Tetris where
 
 --------------------------------- Step ---------------------------------
 
--- |
+-- | Steps the gameloop.
 step :: Tetris -> Tetris
 step tetris
   | isPaused tetris = tetris
   | otherwise = stepGameOver . stepSpawn . stepClear . stepT $ tetris
 
--- |
+-- | Steps the random part of the gameloop.
 stepR :: StdGen -> Tetris -> (Tetris, StdGen)
 stepR = stepQueue
 
--- |
+-- | Steps the time-dependent part of the gameloop.
 stepT :: Tetris -> Tetris
 stepT tetris
   | not $ isTime tetris = tetris
@@ -98,7 +98,7 @@ stepSpawn = stepP (isNothing . tetromino) f
         t = tf $ origin (rows tetris)
         tetris' = tetris {player = p', tetromino = Just t}
 
--- |
+-- | Increases the time by the given amount.
 stepTime :: Float -> Tetris -> Tetris
 stepTime t tetris
   | isPaused tetris = tetris
@@ -176,6 +176,6 @@ consumeTime tetris = tetris {time = time tetris - timeStep tetris}
 
 -- |
 newTetris :: Tetris
-newTetris = Tetris (matrix (20, 10) Nothing) Nothing newPlayer False 0
+newTetris = Tetris emptyRows Nothing newPlayer False 0
 
 --------------------------------- QuickCheck ---------------------------------
