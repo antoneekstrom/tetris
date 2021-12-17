@@ -18,7 +18,7 @@ import Graphics.Gloss.Interface.IO.Game
     KeyState (Down),
     SpecialKey (KeyDown, KeyEsc, KeyLeft, KeyRight, KeyShiftL, KeySpace, KeyUp),
   )
-import Player (Player (queue, score, linesCleared), held, level)
+import Player (Player (linesCleared, queue, score), held, level)
 import Rows (Row)
 import System.Random (StdGen, newStdGen)
 import Tetris (Tetris (time), newTetris, player, rows, step, stepR, stepTime, tetromino)
@@ -67,12 +67,14 @@ view w =
   Pictures $
     map
       ($ fst w)
-      ([ renderCells,
-        renderLanding,
-        renderCurrentTetromino,
-        renderQueue,
-        renderHold
-      ] ++ renderText)
+      ( [ renderCells,
+          renderLanding,
+          renderCurrentTetromino,
+          renderQueue,
+          renderHold
+        ]
+          ++ renderText
+      )
 
 input :: Event -> World -> World
 input e = first (Action.apply (actionFromInput e))

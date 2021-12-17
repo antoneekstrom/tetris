@@ -10,14 +10,14 @@ module Tetromino
     rotate,
     rotateCC,
     landing,
+    tetrominoProps,
   )
 where
 
 import Data.Bifunctor (Bifunctor (second))
 import Maybes (isJust)
-import Rows (Row)
-import Test.QuickCheck (Arbitrary (arbitrary), Gen, elements, oneof)
-import Utilities (At, Color (..), Position, addp, at, down, getm, setm, up, withinBounds)
+import Rows (Row, emptyRows, isCell, origin)
+import Utilities (At, Color (..), Position, addp, at, down, enumerateMatrix, getm, matrix, setm, up, withinBounds)
 
 --------------------------------- Types ---------------------------------
 
@@ -36,10 +36,16 @@ type Mino = (Int, Int)
 -- | Rotates a tetromino.
 type Rotate = Tetromino -> Tetromino
 
---------------------------------- At ---------------------------------
+--------------------------------- Classes ---------------------------------
 
 instance At Tetromino where
   t `at` c = t {center = c}
+
+instance Eq Tetromino where
+  t1 == t2 =
+    color t1 == color t2
+      && offsets t1 == offsets t2
+      && center t1 == center t2
 
 --------------------------------- Functions ---------------------------------
 
@@ -109,7 +115,7 @@ drop rows t = lock rows (landing rows t)
 rotatePivot' :: Bool -> Tetromino -> Tetromino
 rotatePivot' cc t = t {offsets = map rotate (offsets t)}
   where
-    rotate (row, col) = (col, - row)
+    rotate (row, col) = if cc then (- col, row) else (col, - row)
 
 rotatePivot :: Tetromino -> Tetromino
 rotatePivot = rotatePivot' False
@@ -125,7 +131,6 @@ rotateCC rows t = ifLegal (getRotateCC t) rows t
 
 --------------------------------- Tetrominos ---------------------------------
 
--- | The I shaped tetromino.
 i' :: Position -> Tetromino
 i' = Tetromino Cyan rotatePivot rotatePivotCC [(-1, 0), (0, 0), (1, 0), (2, 0)]
 
@@ -150,14 +155,27 @@ z' = Tetromino Red rotatePivot rotatePivotCC [(1, 0), (0, 0), (1, 1), (0, -1)]
 tetrominos :: [Position -> Tetromino]
 tetrominos = [i', t', o', j', l', s', z']
 
---------------------------------- QuickCheck ---------------------------------
+--------------------------------- Properties ---------------------------------
 
-tfGen :: Gen (Position -> Tetromino)
-tfGen = elements tetrominos
+-- | Returns true if the tetromino is in the same position after being rotated four times.
+prop_rotate_id :: Tetromino -> Bool
+prop_rotate_id t = t == rcc (rcc (rcc (rcc t)))
+  where
+    rows = emptyRows
+    rcc = rotateCC rows
 
-tGen :: Position -> Gen Tetromino
-tGen pos = ($ pos) <$> tfGen
+-- | Returns true if the tetromino is in the same position after being rotated clockwise and then counter-clockwise.
+prop_rotate_flip :: Tetromino -> Bool
+prop_rotate_flip t = t == rcc (r t)
+  where
+    rows = emptyRows
+    r = rotate rows
+    rcc = rotateCC rows
 
-instance Arbitrary Tetromino where
-  arbitrary = tGen (0, 0)
-  
+prop_lock :: [Row] -> Tetromino -> Bool
+prop_lock rows t = all (isCell rows') (minos t)
+  where
+    rows' = lock rows t
+
+tetrominoProps :: [Tetromino -> Bool]
+tetrominoProps = [prop_rotate_id, prop_rotate_flip, prop_lock emptyRows]

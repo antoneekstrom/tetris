@@ -26,7 +26,7 @@ data Color
   | Blue
   | Green
   | Red
-  deriving (Eq, Show)
+  deriving (Eq, Show, Enum)
 
 --------------------------------- Lists ---------------------------------
 
